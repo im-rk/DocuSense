@@ -1,0 +1,22 @@
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Environment variables & secrets
+.env
+
+# Model weights & Checkpoints (large files)
+models/checkpoints/*.pth
+models/checkpoints/*.pt
+
+# Uploads directory
+uploads/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Docker/OS files
+.DS_Store
