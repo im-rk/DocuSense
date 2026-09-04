@@ -1,0 +1,12 @@
+[
+    {
+        "file_path": "sample_invoice.pdf",
+        "ground_truth": {
+            "vendor_name": "Test Vendor",
+            "invoice_number": "INV-123",
+            "total_amount": 100.00,
+            "invoice_date": "2024-01-01",
+            "tax_amount": 10.00
+        }
+    }
+]

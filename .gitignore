@@ -20,3 +20,6 @@ __pycache__/
 
 # Docker/OS files
 .DS_Store
+
+# PDF
+/pdfs

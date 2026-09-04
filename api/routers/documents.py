@@ -1,6 +1,9 @@
 import os, shutil, time
 from uuid import UUID
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
+from fastapi.responses import StreamingResponse
+import pandas as pd
+from io import BytesIO
 from sqlalchemy.orm import Session
 from db.session import get_db
 from db.models import Document, Extraction, Correction
@@ -111,3 +114,37 @@ def save_correction(
 
     db.commit()
     return {"message": "Corrections saved"}
+
+@router.get("/{document_id}/export")
+def export_document(
+    document_id: UUID,
+    format: str = "json",
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    extraction = db.query(Extraction)\
+        .filter(Extraction.document_id == document_id).first()
+    if not extraction:
+        raise HTTPException(404, "Not found")
+
+    if format == "json":
+        return extraction.raw_extraction
+
+    flat = {**extraction.raw_extraction, "document_type": extraction.document_type}
+
+    if format == "csv":
+        df = pd.DataFrame([flat])
+        buf = BytesIO()
+        df.to_csv(buf, index=False)
+        buf.seek(0)
+        return StreamingResponse(buf, media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=extraction.csv"})
+
+    if format == "excel":
+        df = pd.DataFrame([flat])
+        buf = BytesIO()
+        df.to_excel(buf, index=False)
+        buf.seek(0)
+        return StreamingResponse(buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=extraction.xlsx"})
