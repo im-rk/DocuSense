@@ -308,15 +308,25 @@ class WordRegionExtractor(nn.Module):
 # 5. Helpers
 # =========================================================
 def compute_class_weights(dataset, num_classes):
-    """Count labels across a ConcatDataset and return inverse-freq weights."""
+    """Count labels across a ConcatDataset and return inverse-freq weights.
+    Classes with zero samples get weight=0 so they don't distort training.
+    """
     counts = torch.zeros(num_classes)
-    # Iterate through all underlying datasets
     for ds in (dataset.datasets if hasattr(dataset, "datasets") else [dataset]):
         for s in ds.samples:
             counts[s["label"]] += 1
     print(f"  Label counts: {counts.tolist()}")
-    weights = 1.0 / (counts + 1e-5)
-    weights = weights / weights.sum() * num_classes
+
+    # Only compute inverse-freq for classes that actually exist in the data
+    weights = torch.zeros(num_classes)
+    non_zero_mask = counts > 0
+    weights[non_zero_mask] = 1.0 / counts[non_zero_mask]
+
+    # Normalize only over non-zero classes
+    total = weights.sum()
+    if total > 0:
+        weights = weights / total * non_zero_mask.sum().float()
+
     return weights
 
 
@@ -388,7 +398,7 @@ def train():
     criterion = nn.CrossEntropyLoss(weight=weights)
     optimizer = Adam(model.parameters(), lr=LR, weight_decay=1e-4)
     scheduler = ReduceLROnPlateau(optimizer, mode="max",
-                                  patience=5, factor=0.5, verbose=True)
+                                  patience=5, factor=0.5)
 
     history = {"train_loss": [], "val_f1": []}
     best_f1 = 0.0
