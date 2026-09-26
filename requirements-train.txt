@@ -1,0 +1,6 @@
+# Only needed to RUN the training code. Kaggle already has torch, numpy, pillow, opencv, matplotlib, pandas, scikit-learn.
+# The Kaggle notebooks install the one missing piece themselves:  pip install -q datasets
+datasets
+opencv-python-headless
+matplotlib
+pandas
