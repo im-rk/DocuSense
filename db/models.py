@@ -1,54 +1,63 @@
 import uuid
-from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from db.session import Base
+from datetime import datetime, timezone
 
-class User(Base):
-    __tablename__ = "users"
-    id            = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email         = Column(String(255), unique=True, nullable=False)
-    password_hash = Column(String(255))
-    full_name     = Column(String(255))
-    created_at    = Column(DateTime, default=datetime.utcnow)
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+def _now():
+    return datetime.now(timezone.utc)
+
+
+def _id():
+    return uuid.uuid4().hex
+
+
+class Base(DeclarativeBase):
+    pass
+
 
 class Document(Base):
     __tablename__ = "documents"
-    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    original_name   = Column(String(500), nullable=False)
-    file_path       = Column(String(1000), nullable=False)
-    file_size_bytes = Column(Integer, nullable=False)
-    mime_type       = Column(String(100), nullable=False)
-    page_count      = Column(Integer)
-    uploaded_by     = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    uploaded_at     = Column(DateTime, default=datetime.utcnow)
-    status          = Column(String(20), default="PENDING")
-    celery_task_id  = Column(String(200))
-    processing_started_at  = Column(DateTime)
-    processing_finished_at = Column(DateTime)
-    error_message   = Column(Text)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_id)
+    original_name: Mapped[str] = mapped_column(String(500))
+    file_path: Mapped[str] = mapped_column(String(1000))
+    mime_type: Mapped[str] = mapped_column(String(100), default="")
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(20), default="PENDING", index=True)   # PENDING|PROCESSING|COMPLETE|NEEDS_REVIEW|FAILED
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    extraction: Mapped["Extraction | None"] = relationship(back_populates="document", uselist=False,
+                                                           cascade="all, delete-orphan")
+
 
 class Extraction(Base):
     __tablename__ = "extractions"
-    id                = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    document_id       = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
-    document_type     = Column(String(50))
-    type_confidence   = Column(Float)
-    raw_extraction    = Column(JSONB, default=dict)
-    field_confidences = Column(JSONB, default=dict)
-    line_items        = Column(JSONB, default=list)
-    validation_passed = Column(Boolean)
-    validation_errors = Column(JSONB, default=list)
-    validation_warnings = Column(JSONB, default=list)
-    inference_ms      = Column(Integer)
-    extracted_at      = Column(DateTime, default=datetime.utcnow)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), unique=True, index=True)
+    document_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    type_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fields: Mapped[dict] = mapped_column(JSON, default=dict)
+    line_items: Mapped[list] = mapped_column(JSON, default=list)
+    confidences: Mapped[dict] = mapped_column(JSON, default=dict)
+    validation: Mapped[dict] = mapped_column(JSON, default=dict)
+    words: Mapped[list] = mapped_column(JSON, default=list)
+    image_size: Mapped[dict] = mapped_column(JSON, default=dict)
+    extra: Mapped[dict] = mapped_column(JSON, default=dict)          # type_probabilities, field_sources, versions, ocr engine
+    inference_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    extracted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    document: Mapped[Document] = relationship(back_populates="extraction")
+    corrections: Mapped[list["Correction"]] = relationship(back_populates="extraction", cascade="all, delete-orphan")
+
 
 class Correction(Base):
+    """Human edits: audit trail and future training data."""
     __tablename__ = "corrections"
-    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    extraction_id   = Column(UUID(as_uuid=True), ForeignKey("extractions.id"), nullable=False)
-    corrected_by    = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    field_name      = Column(String(100), nullable=False)
-    original_value  = Column(Text)
-    corrected_value = Column(Text, nullable=False)
-    corrected_at    = Column(DateTime, default=datetime.utcnow)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_id)
+    extraction_id: Mapped[str] = mapped_column(ForeignKey("extractions.id"), index=True)
+    field: Mapped[str] = mapped_column(String(100))
+    original: Mapped[str | None] = mapped_column(Text, nullable=True)
+    corrected: Mapped[str] = mapped_column(Text)
+    corrected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    extraction: Mapped[Extraction] = relationship(back_populates="corrections")
