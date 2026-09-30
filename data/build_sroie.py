@@ -9,6 +9,7 @@ SROIE gives LINE boxes and only 4 key values, so:
   * VENDOR / DATE / TOTAL are labelled by matching the key values against the lines.
 Documents whose key values cannot be located are DROPPED (their labels would be wrong) and counted.
 """
+import difflib
 import json
 import os
 import re
@@ -68,21 +69,31 @@ def label_sroie(lines: list, ent: dict):
             line_of.append(li)
     flags = {"vendor": False, "date": False, "total": False}
 
-    # VENDOR: greedily cover the company string with the first lines that are substrings of it
-    cn, used, vlines = norm(ent.get("company", "")), 0, set()
-    if cn:
-        for li, l in enumerate(lines):
-            nl = norm(l["text"])
-            if len(nl) >= 3 and nl in cn and used + len(nl) <= len(cn) + 2:
-                vlines.add(li)
-                used += len(nl)
-                if used >= len(cn) - 2:
+    # VENDOR: word-level fuzzy match of the company name's words, searched only in the top lines of the receipt
+    # (a vendor line often carries extra text such as a registration number, and OCR text has small errors).
+    ctoks = [norm(t) for t in str(ent.get("company", "")).split() if norm(t)]
+    if ctoks:
+        found, hits = set(), []
+        for i, (w, li) in enumerate(zip(words, line_of)):
+            if li >= 10:                                        # vendor is at the top of a receipt
+                continue
+            nw = norm(w["text"])
+            if not nw:
+                continue
+            for k, ct in enumerate(ctoks):
+                if nw == ct or (len(nw) >= 4 and len(ct) >= 4 and difflib.SequenceMatcher(None, nw, ct).ratio() >= 0.8):
+                    hits.append(i); found.add(k)
                     break
-    flags["vendor"] = bool(cn) and used >= 0.8 * len(cn)
-    if flags["vendor"]:
-        for w, li in zip(words, line_of):
-            if li in vlines:
-                w["label"] = L["VENDOR"]
+        flags["vendor"] = len(found) >= max(1, round(0.7 * len(ctoks)))
+        if flags["vendor"]:
+            vlines = {line_of[i] for i in hits}
+            first = min(vlines)                                 # keep the contiguous block starting at the first hit line
+            block = {first}
+            while first + len(block) in vlines:
+                block.add(first + len(block))
+            for i in hits:
+                if line_of[i] in block:
+                    words[i]["label"] = L["VENDOR"]
 
     # DATE: first line containing the date string; label the words that are part of it
     dn = norm(ent.get("date", ""))
@@ -110,7 +121,9 @@ def label_sroie(lines: list, ent: dict):
         if pick is not None:
             words[pick]["label"] = L["TOTAL"]
             flags["total"] = True
-    return (words if all(flags.values()) else None), flags
+    # date + total are required; a receipt whose vendor cannot be located is kept, with VENDOR marked "not annotated"
+    # (source 'sroie_nv'), so the partial-label loss does not teach the model that its vendor words are OTHER.
+    return (words if flags["date"] and flags["total"] else None), flags
 
 
 def find_items(root: str) -> list:
@@ -158,6 +171,7 @@ def build_sroie(out_dir: str, root: str, val_frac: float = 0.10, audit: int = 20
                 "val": SplitBuilder(out_dir, "sroie_val", audit=audit // 2),
                 "test": SplitBuilder(out_dir, "sroie_test", audit=audit)}
     dropped = {"vendor": 0, "date": 0, "total": 0, "total_docs": 0, "seen": 0}
+    no_vendor = 0
     for it in items[: limit or None]:
         dropped["seen"] += 1
         words, flags = label_sroie(parse_box_file(it["box"]), it["ent"])
@@ -170,12 +184,17 @@ def build_sroie(out_dir: str, root: str, val_frac: float = 0.10, audit: int = 20
         if split == "train" and zlib.crc32(it["id"].encode()) % 1000 < val_frac * 1000:
             split = "val"                                            # deterministic 10% validation carve-out
         img = Image.open(it["img"]).convert("RGB")
-        builders[split].add(f"sroie_{split}_{it['id']}", "sroie", split, np.asarray(img.convert("L")), words, pil_img=img)
+        src = "sroie" if flags["vendor"] else "sroie_nv"             # vendor not located -> VENDOR unannotated
+        no_vendor += int(not flags["vendor"])
+        builders[split].add(f"sroie_{split}_{it['id']}", src, split, np.asarray(img.convert("L")), words, pil_img=img)
     stats = [b.save() for b in builders.values()]
     for s in stats:
         print(s)
     cov = 1 - dropped["total_docs"] / max(dropped["seen"], 1)
-    print(f"SROIE label coverage: {cov:.1%} of documents kept; drops by key: {dropped}")
+    print(f"SROIE label coverage: {cov:.1%} of documents kept (need date + total); drops by key: {dropped}")
+    kept = dropped["seen"] - dropped["total_docs"]
+    print(f"SROIE vendor labelled on {1 - no_vendor / max(kept, 1):.1%} of kept documents "
+          f"({no_vendor} kept with VENDOR marked 'not annotated')")
     if cov < 0.95:
         print("WARNING: coverage below the 95% gate - inspect the audit images and fix the matching rules.")
-    return {"splits": stats, "dropped": dropped, "coverage": cov}
+    return {"splits": stats, "dropped": dropped, "coverage": cov, "no_vendor": no_vendor}

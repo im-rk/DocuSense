@@ -9,9 +9,13 @@
 import glob, os, sys, random, json
 import numpy as np
 
-hits = glob.glob("/kaggle/input/*/models/__init__.py") + glob.glob("/kaggle/input/*/*/models/__init__.py")
+hits = sorted(glob.glob("/kaggle/input/**/models/tagger/labels.py", recursive=True), key=len)   # any nesting depth
+if not hits:   # show what IS attached, so the problem is visible
+    for dp, ds, fs in os.walk("/kaggle/input"):
+        if dp.count("/") <= 5: print(dp, ds[:6], fs[:4])
+
 assert hits, "Code dataset not found: add your `docusense-code` dataset via Add Data (see KAGGLE_TRAINING.md)"
-CODE = os.path.dirname(os.path.dirname(hits[0]))
+CODE = os.path.dirname(os.path.dirname(os.path.dirname(hits[0])))
 sys.path.insert(0, CODE)
 print("code from:", CODE)
 
@@ -26,12 +30,15 @@ cord_stats = build_cord(WORK, hf_id="naver-clova-ix/cord-v2", audit=20)
 
 # %% Cell 3 - SROIE (vendor / date / total labels). Auto-detects the Kaggle dataset folder
 from data.build_sroie import build_sroie
-cands = [p for p in glob.glob("/kaggle/input/*") if "sroie" in p.lower()]
-assert cands, "SROIE dataset not attached: Add Data -> search 'SROIE datasetv2'"
-SROIE_ROOT = cands[0]
+# the DATASET "SROIE datasetv2" (by urbikn) - not a notebook. Its folder holds train/ and test/ with images + box/entities txt files.
+cands = sorted({os.path.dirname(os.path.dirname(p)) for p in glob.glob("/kaggle/input/**/*.jpg", recursive=True)
+                if "sroie" in p.lower() and "layoutlm" not in p.lower()}, key=len)
+assert cands, "SROIE dataset not attached: Add Data -> Datasets -> search 'SROIE datasetv2' (the DATASET, not the LayoutLM notebook)"
+SROIE_ROOT = os.path.dirname(cands[0]) if os.path.basename(cands[0]).lower() in ("train", "test") else cands[0]
 print("SROIE root:", SROIE_ROOT)
 sroie_res = build_sroie(WORK, SROIE_ROOT, audit=20)
-# GATE: coverage must be >= 95%. If not, look at sroie_res['dropped'] and the audit images below, then fix data/build_sroie.py
+# GATE: coverage (docs with date + total found) must be >= 95%. Vendor may be missing on some docs - those are kept with
+# VENDOR marked 'not annotated'. Check the audit images below.
 
 # %% Cell 4 - LABEL-QUALITY GATE: look at the auto-labelled pages (boxes are coloured by label)
 import matplotlib.pyplot as plt
@@ -53,7 +60,7 @@ from data.build_rvl_cache import build_cls_cache
 # Tries these Hugging Face copies in order (classes are mapped by NAME, so different id orders don't matter).
 # If they all fail (id/format changed), attach a local RVL-CDIP copy (one sub-folder per class, e.g. invoice/, form/, letter/,
 # email/, memo/, resume/, news_article/) and pass rvl_dir="/kaggle/input/<that-dataset>" instead.
-stats = build_cls_cache(WORK, quotas={"train": 3000, "val": 500, "test": 500}, hf_ids=("chainyo/rvl-cdip", "aharley/rvl_cdip"))
+stats = build_cls_cache(WORK, quotas={"train": 3000, "val": 500, "test": 500}, hf_ids=("chainyo/rvl-cdip",))
 
 # %% Cell 7 - summary
 import subprocess

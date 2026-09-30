@@ -12,6 +12,7 @@ DOC_CLASSES = ["RECEIPT", "INVOICE", "FORM", "LETTER", "OTHER"]
 _UNANNOTATED = {
     "cord":  ["VENDOR", "DATE", "INVOICE_NO"],
     "sroie": ["ITEM_NAME", "ITEM_QTY", "ITEM_PRICE", "SUBTOTAL", "TAX", "INVOICE_NO"],
+    "sroie_nv": ["VENDOR", "ITEM_NAME", "ITEM_QTY", "ITEM_PRICE", "SUBTOTAL", "TAX", "INVOICE_NO"],   # vendor not located
     "synth": [],
 }
 

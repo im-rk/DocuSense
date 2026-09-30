@@ -7,9 +7,13 @@
 # %% Cell 1 - setup
 import glob, os, sys, json, csv
 import torch
-hits = glob.glob("/kaggle/input/*/models/__init__.py") + glob.glob("/kaggle/input/*/*/models/__init__.py")
-sys.path.insert(0, os.path.dirname(os.path.dirname(hits[0])))
-found = glob.glob("/kaggle/input/*/cord_train.jsonl") + glob.glob("/kaggle/input/*/*/cord_train.jsonl")
+hits = sorted(glob.glob("/kaggle/input/**/models/tagger/labels.py", recursive=True), key=len)   # any nesting depth
+if not hits:   # show what IS attached, so the problem is visible
+    for dp, ds, fs in os.walk("/kaggle/input"):
+        if dp.count("/") <= 5: print(dp, ds[:6], fs[:4])
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(hits[0]))))
+found = glob.glob("/kaggle/input/**/cord_train.jsonl", recursive=True)
 DATA = os.path.dirname(found[0])
 OUT = "/kaggle/working/ablation"; os.makedirs(OUT, exist_ok=True)
 from models.tagger.train import train_tagger

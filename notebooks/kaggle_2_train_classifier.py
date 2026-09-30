@@ -7,10 +7,14 @@
 # %% Cell 1 - setup
 import glob, os, sys, json
 import torch
-hits = glob.glob("/kaggle/input/*/models/__init__.py") + glob.glob("/kaggle/input/*/*/models/__init__.py")
+hits = sorted(glob.glob("/kaggle/input/**/models/tagger/labels.py", recursive=True), key=len)   # any nesting depth
+if not hits:   # show what IS attached, so the problem is visible
+    for dp, ds, fs in os.walk("/kaggle/input"):
+        if dp.count("/") <= 5: print(dp, ds[:6], fs[:4])
+
 assert hits, "Attach your `docusense-code` dataset"
-sys.path.insert(0, os.path.dirname(os.path.dirname(hits[0])))
-stats = glob.glob("/kaggle/input/*/cls_stats.json") + glob.glob("/kaggle/input/*/*/cls_stats.json")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(hits[0]))))
+stats = glob.glob("/kaggle/input/**/cls_stats.json", recursive=True)
 assert stats, "Attach your `docusense-data` dataset (built by notebook 1)"
 DATA = os.path.dirname(stats[0])
 OUT = "/kaggle/working/ckpt"; os.makedirs(OUT, exist_ok=True)

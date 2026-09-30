@@ -24,7 +24,7 @@ NAME_TO_OURS = {"invoice": "INVOICE", "form": "FORM", "letter": "LETTER",
 ORIGINAL_NAMES = ["letter", "form", "email", "handwritten", "advertisement", "scientific report",
                   "scientific publication", "specification", "file folder", "news article", "budget", "invoice",
                   "presentation", "questionnaire", "resume", "memo"]
-DEFAULT_SOURCES = ("chainyo/rvl-cdip", "aharley/rvl_cdip")
+DEFAULT_SOURCES = ("chainyo/rvl-cdip",)
 
 
 def _key(n: str) -> str:
@@ -44,8 +44,16 @@ def _targets(names, quota):
 
 def collect_hf(hf_id, hf_split, quota, seed=0, buffer_size=5000, max_seen=400_000):
     from datasets import load_dataset
-    kw = {"trust_remote_code": True} if hf_id == "aharley/rvl_cdip" else {}      # script-based repo (needs datasets<4)
-    ds = load_dataset(hf_id, split=hf_split, streaming=True, **kw)
+    kw = {}
+    ds, errs = None, []
+    for name in ((hf_split,) if hf_split != "validation" else ("validation", "val", "valid")):   # copies name it differently
+        try:
+            ds = load_dataset(hf_id, split=name, streaming=True, **kw)
+            break
+        except ValueError as e:
+            errs.append(str(e)[:150])
+    if ds is None:
+        raise ValueError(" / ".join(errs))
     feat = getattr(ds, "features", None)
     names = feat["label"].names if feat and "label" in feat else None
     if names is None:
