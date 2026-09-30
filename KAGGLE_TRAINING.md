@@ -100,7 +100,7 @@ Or from a terminal: `python -m pipeline.run path\to\receipt.jpg`.
 |---|---|
 | "Code dataset not found" | Attach **docusense-code** (Add Data). The folders `models/` and `data/` must be inside it. |
 | SROIE not found / coverage < 95 % | Attach *SROIE datasetv2*; look at `sroie_res['dropped']` and the audit images; tell me the folder layout you see. |
-| RVL-CDIP streaming fails | Cell 6 tries `chainyo/rvl-cdip` then `aharley/rvl_cdip`. If both fail, attach any RVL-CDIP copy with one sub-folder per class and call `build_cls_cache(WORK, rvl_dir="/kaggle/input/<name>")`. |
+| RVL-CDIP streaming fails | Cell 6 streams `chainyo/rvl-cdip` (its validation split is called `val`; handled). If it fails, attach any RVL-CDIP copy with one sub-folder per class and call `build_cls_cache(WORK, rvl_dir="/kaggle/input/<name>")`. |
 | Session died / timed out | Re-run the training cell — it **resumes** from the last per-epoch checkpoint in `/kaggle/working/ckpt` (use *Save Version* so it isn't lost). |
 | CUDA out of memory | Classifier: `batch_size=32`. Tagger: `batch_size=4`. |
 | Metrics far below targets | Don't add layers first. Look at the audit images, the per-class F1 table, and the confusion matrix, then tell me the numbers — the plan is error analysis → fix labels/rules/augmentation → retrain. |
