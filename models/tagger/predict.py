@@ -10,7 +10,7 @@ from models.tagger.labels import LABELS
 
 
 def load_tagger(path: str, device: str = "cpu"):
-    ck = torch.load(path, map_location=device)
+    ck = torch.load(path, map_location=device, weights_only=False)
     model = build_tagger(ck["config"])
     model.load_state_dict(ck["state_dict"])
     model.to(device).eval()

@@ -120,12 +120,22 @@ def test_rvl_val_split_name_fallback(monkeypatch):
     calls = []
     class DS:
         features = {"label": types.SimpleNamespace(names=rc.ORIGINAL_NAMES)}
+        def cast_column(self, *a, **k): return self
         def shuffle(self, **k): return iter([{"label": 11, "image": Image.new("L", (40, 60), 255)}] * 5)
     def load_dataset(hf_id, split, streaming, **kw):
         calls.append(split)
         if split == "validation":
             raise ValueError("Bad split: validation. Available splits: ['train', 'test', 'val']")
         return DS()
-    monkeypatch.setitem(sys.modules, "datasets", types.SimpleNamespace(load_dataset=load_dataset))
+    monkeypatch.setitem(sys.modules, "datasets", types.SimpleNamespace(load_dataset=load_dataset, Image=lambda **k: None))
     X, Y = rc.collect_hf("x/rvl", "validation", quota=2)
     assert calls == ["validation", "val"] and len(X) == 2 and set(Y) == {rc.CID["INVOICE"]}
+
+
+def test_rvl_decode_skips_corrupt_images():
+    import io
+    from PIL import Image
+    from data.build_rvl_cache import _decode
+    buf = io.BytesIO(); Image.new("L", (300, 200), 128).save(buf, "TIFF")
+    assert _decode({"bytes": buf.getvalue(), "path": None}).shape == (256, 256)
+    assert _decode({"bytes": b"II*\x00corrupt", "path": None}) is None

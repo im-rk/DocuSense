@@ -44,13 +44,13 @@ def train_classifier(data_dir, out_dir, epochs=30, batch_size=64, lr=2e-3, weigh
     print(f"[{tag}] arch={arch} params={n_params/1e6:.2f}M device={device} train={len(tr_ds)} class_counts={counts.astype(int).tolist()}")
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, epochs=epochs, steps_per_epoch=len(train_loader), pct_start=0.2)
-    scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 
     last_p, best_p = os.path.join(out_dir, f"{tag}_last.pth"), os.path.join(out_dir, f"{tag}_best.pth")
     hist = {"train_loss": [], "val_loss": [], "val_acc": []}
     start, best = 0, -1.0
     if resume and os.path.exists(last_p):
-        ck = torch.load(last_p, map_location=device)
+        ck = torch.load(last_p, map_location=device, weights_only=False)
         model.load_state_dict(ck["model"]); opt.load_state_dict(ck["opt"]); sched.load_state_dict(ck["sched"])
         hist, start, best = ck["hist"], ck["epoch"] + 1, ck["best"]
         print(f"[{tag}] resumed from epoch {start}")
@@ -78,7 +78,7 @@ def train_classifier(data_dir, out_dir, epochs=30, batch_size=64, lr=2e-3, weigh
         torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(),
                     "hist": hist, "epoch": epoch, "best": best}, last_p)          # per-epoch checkpoint (resume)
 
-    model.load_state_dict(torch.load(best_p, map_location=device))
+    model.load_state_dict(torch.load(best_p, map_location=device, weights_only=False))
     test = evaluate(model, test_loader, device, n_cls, criterion)
     metrics = {"val_acc_best": best, "test_acc": test["acc"], "params": n_params, "arch": arch, "augment": augment,
                "test_recall": {c: float(r) for c, r in zip(DOC_CLASSES, test["recall"])}}

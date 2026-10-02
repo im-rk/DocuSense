@@ -42,13 +42,24 @@ def _targets(names, quota):
     return out
 
 
+def _decode(img):
+    """HF image cell (decode=False -> {'bytes','path'}) or PIL image -> 256x256 page, or None if the file is corrupt."""
+    try:
+        if isinstance(img, dict):
+            import io
+            img = Image.open(io.BytesIO(img["bytes"]) if img.get("bytes") else img["path"])
+        img.load()
+        return letterbox_gray(img)
+    except Exception:                                            # RVL-CDIP contains a few corrupt TIFFs
+        return None
+
+
 def collect_hf(hf_id, hf_split, quota, seed=0, buffer_size=5000, max_seen=400_000):
-    from datasets import load_dataset
-    kw = {}
+    from datasets import Image as HFImage, load_dataset
     ds, errs = None, []
     for name in ((hf_split,) if hf_split != "validation" else ("validation", "val", "valid")):   # copies name it differently
         try:
-            ds = load_dataset(hf_id, split=name, streaming=True, **kw)
+            ds = load_dataset(hf_id, split=name, streaming=True)
             break
         except ValueError as e:
             errs.append(str(e)[:150])
@@ -59,21 +70,33 @@ def collect_hf(hf_id, hf_split, quota, seed=0, buffer_size=5000, max_seen=400_00
     if names is None:
         print(f"  WARNING: {hf_id} exposes no label names - assuming the original RVL-CDIP id order")
         names = ORIGINAL_NAMES
+    ds = ds.cast_column("image", HFImage(decode=False))         # decode ourselves: one bad file must not kill the stream
     target = _targets(names, quota)
     print(f"  {hf_id}/{hf_split}: label map {({names[i]: t[0] for i, t in target.items()})}")
     have = {i: 0 for i in target}
-    X, Y = [], []
-    for seen, ex in enumerate(ds.shuffle(seed=seed, buffer_size=buffer_size)):
-        lab = int(ex["label"])
-        if lab in target and have[lab] < target[lab][1]:
-            X.append(letterbox_gray(ex["image"])); Y.append(CID[target[lab][0]]); have[lab] += 1
-        if seen % 4000 == 0:
-            print(f"  {hf_split}: seen {seen}, collected {sum(have.values())}/{sum(t[1] for t in target.values())}")
-        if all(have[i] >= target[i][1] for i in target) or seen > max_seen:
-            break
+    X, Y, bad = [], [], 0
+    try:
+        for seen, ex in enumerate(ds.shuffle(seed=seed, buffer_size=buffer_size)):
+            lab = int(ex["label"])
+            if lab in target and have[lab] < target[lab][1]:
+                g = _decode(ex["image"])
+                if g is None:
+                    bad += 1
+                else:
+                    X.append(g); Y.append(CID[target[lab][0]]); have[lab] += 1
+            if seen % 4000 == 0:
+                print(f"  {hf_split}: seen {seen}, collected {sum(have.values())}/{sum(t[1] for t in target.values())}")
+            if all(have[i] >= target[i][1] for i in target) or seen > max_seen:
+                break
+    except Exception as e:                                       # network died mid-stream after HF's own retries
+        if len(X) < 0.5 * sum(t[1] for t in target.values()):
+            raise
+        print(f"  WARNING: stream stopped early ({type(e).__name__}); keeping the {len(X)} images collected")
     short = {names[i]: (have[i], target[i][1]) for i in target if have[i] < target[i][1]}
     if short:
         print(f"  NOTE: fewer images than requested for {short}")
+    if bad:
+        print(f"  skipped {bad} corrupt images")
     return X, Y
 
 
@@ -89,7 +112,9 @@ def collect_dir(root, quota, seed=0):
         files = [f for f in os.listdir(os.path.join(root, sub)) if f.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff"))]
         rng.shuffle(files)
         for f in files[: (per_other if ours == "OTHER" else quota)]:
-            X.append(letterbox_gray(Image.open(os.path.join(root, sub, f)))); Y.append(CID[ours])
+            g = _decode(Image.open(os.path.join(root, sub, f)))
+            if g is not None:
+                X.append(g); Y.append(CID[ours])
     return X, Y
 
 
@@ -99,35 +124,40 @@ def build_cls_cache(out_dir, quotas=None, hf_ids=DEFAULT_SOURCES, rvl_dir=None, 
     rng = np.random.default_rng(seed)
     summary, stats = {}, {}
     for split in ("train", "val", "test"):
-        X, Y, err = [], [], []
-        if rvl_dir:
-            X, Y = collect_dir(rvl_dir, quotas[split], seed)
+        xp, yp = os.path.join(out_dir, f"cls_{split}_x.npy"), os.path.join(out_dir, f"cls_{split}_y.npy")
+        if os.path.exists(xp) and os.path.exists(yp):                # already built (re-run after a crash): skip
+            X, Y = np.load(xp, mmap_mode="r"), np.load(yp)
+            print(f"{split}: already built, skipping")
         else:
-            for hf_id in hf_ids:                                    # first source that works wins
-                try:
-                    X, Y = collect_hf(hf_id, hf_split[split], quotas[split], seed)
-                    if X:
-                        break
-                except Exception as e:                              # dataset id/format changed, no network, ...
-                    err.append(f"{hf_id}: {type(e).__name__}: {str(e)[:200]}")
-                    print("  source failed ->", err[-1])
-        if not X:
-            raise RuntimeError("Could not collect RVL-CDIP images. Tried: " + " | ".join(err) +
-                               "\nFix: attach an RVL-CDIP copy and pass rvl_dir=<folder with one sub-folder per class>.")
-        for src in ("cord", "sroie"):
-            p = os.path.join(out_dir, f"{src}_{split}_receipt.npy")
-            if os.path.exists(p):
-                r = np.load(p)
-                X += list(r); Y += [CID["RECEIPT"]] * len(r)
-        X, Y = np.stack(X).astype(np.uint8), np.array(Y, dtype=np.int64)
-        order = rng.permutation(len(Y))
-        X, Y = X[order], Y[order]
-        np.save(os.path.join(out_dir, f"cls_{split}_x.npy"), X)
-        np.save(os.path.join(out_dir, f"cls_{split}_y.npy"), Y)
+            X, Y, err = [], [], []
+            if rvl_dir:
+                X, Y = collect_dir(rvl_dir, quotas[split], seed)
+            else:
+                for hf_id in hf_ids:                                # first source that works wins
+                    try:
+                        X, Y = collect_hf(hf_id, hf_split[split], quotas[split], seed)
+                        if X:
+                            break
+                    except Exception as e:                          # dataset id/format changed, no network, ...
+                        err.append(f"{hf_id}: {type(e).__name__}: {str(e)[:200]}")
+                        print("  source failed ->", err[-1])
+            if not X:
+                raise RuntimeError("Could not collect RVL-CDIP images. Tried: " + " | ".join(err) +
+                                   "\nFix: attach an RVL-CDIP copy and pass rvl_dir=<folder with one sub-folder per class>.")
+            for src in ("cord", "sroie"):
+                p = os.path.join(out_dir, f"{src}_{split}_receipt.npy")
+                if os.path.exists(p):
+                    r = np.load(p)
+                    X += list(r); Y += [CID["RECEIPT"]] * len(r)
+            X, Y = np.stack(X).astype(np.uint8), np.array(Y, dtype=np.int64)
+            order = rng.permutation(len(Y))
+            X, Y = X[order], Y[order]
+            np.save(xp, X)
+            np.save(yp, Y)
         summary[split] = {c: int((Y == i).sum()) for c, i in CID.items()}
         print(split, summary[split])
         if split == "train":
-            v = X.astype(np.float32) / 255.0
+            v = np.asarray(X, dtype=np.float32) / 255.0
             stats = {"mean": float(v.mean()), "std": float(v.std())}
             del v
     stats["counts"] = summary

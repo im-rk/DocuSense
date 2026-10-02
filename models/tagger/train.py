@@ -96,7 +96,7 @@ def train_tagger(data_dir, out_dir, **overrides):
     hist = {"train_loss": [], "val_macro_f1": []}
     start, best, bad = 0, -1.0, 0
     if cfg["resume"] and os.path.exists(last_p):
-        ck = torch.load(last_p, map_location=device)
+        ck = torch.load(last_p, map_location=device, weights_only=False)
         model.load_state_dict(ck["model"]); opt.load_state_dict(ck["opt"]); sched.load_state_dict(ck["sched"])
         hist, start, best, bad = ck["hist"], ck["epoch"] + 1, ck["best"], ck["bad"]
         print(f"[{tag}] resumed from epoch {start}")
@@ -129,7 +129,7 @@ def train_tagger(data_dir, out_dir, **overrides):
             break
 
     # ---- final evaluation on the held-out test sets with the best weights ----
-    model.load_state_dict(torch.load(best_p, map_location=device))
+    model.load_state_dict(torch.load(best_p, map_location=device, weights_only=False))
     results, pooled = {}, []
     for name in te_names:
         preds = predict_records(model, TaggerDataset(data_dir, [name], vocab), device)

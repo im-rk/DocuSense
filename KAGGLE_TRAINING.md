@@ -100,6 +100,7 @@ Or from a terminal: `python -m pipeline.run path\to\receipt.jpg`.
 |---|---|
 | "Code dataset not found" | Attach **docusense-code** (Add Data). The folders `models/` and `data/` must be inside it. |
 | SROIE not found / coverage < 95 % | Attach *SROIE datasetv2*; look at `sroie_res['dropped']` and the audit images; tell me the folder layout you see. |
+| `UnidentifiedImageError` / `read operation timed out` in cell 6 | Fixed in the current bundle: corrupt RVL images are skipped, a dropped stream keeps what it collected, and a re-run skips splits already built. Re-bundle and upload a **new version** of docusense-code, then re-run notebook 1. |
 | RVL-CDIP streaming fails | Cell 6 streams `chainyo/rvl-cdip` (its validation split is called `val`; handled). If it fails, attach any RVL-CDIP copy with one sub-folder per class and call `build_cls_cache(WORK, rvl_dir="/kaggle/input/<name>")`. |
 | Session died / timed out | Re-run the training cell — it **resumes** from the last per-epoch checkpoint in `/kaggle/working/ckpt` (use *Save Version* so it isn't lost). |
 | CUDA out of memory | Classifier: `batch_size=32`. Tagger: `batch_size=4`. |

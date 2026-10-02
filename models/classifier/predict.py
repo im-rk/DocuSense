@@ -8,7 +8,7 @@ from models.classifier.preprocess import IMG_SIZE, letterbox_gray, to_tensor_inp
 
 
 def load_classifier(path: str, device: str = "cpu"):
-    ck = torch.load(path, map_location=device)
+    ck = torch.load(path, map_location=device, weights_only=False)
     m = build_classifier(ck["config"]["arch"], ck["config"]["n_cls"])
     m.load_state_dict(ck["state_dict"])
     m.to(device).eval()
