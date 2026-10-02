@@ -1,0 +1,10 @@
+[
+  {
+    "file": "evaluation/docs/receipt_001.jpg",
+    "ground_truth": {"vendor": "UNIHAKKA INTERNATIONAL SDN BHD", "date": "2018-03-15", "subtotal": 65.0, "tax": 3.9, "total": 68.9}
+  },
+  {
+    "file": "evaluation/docs/invoice_001.pdf",
+    "ground_truth": {"vendor": "Tata Consultancy Services", "invoice_number": "INV-2024-0847", "date": "2024-03-15", "total": 76700}
+  }
+]
