@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     tesseract_cmd: str = ""            # e.g. C:\Program Files\Tesseract-OCR\tesseract.exe (blank = use PATH)
     poppler_path: str = ""             # folder containing pdftoppm (blank = use PATH)
-    ocr_min_conf: int = 30
+    ocr_min_conf: int = 10
     ocr_psm: int = 6
     pdf_dpi: int = 200
 

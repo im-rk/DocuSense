@@ -148,8 +148,9 @@ def make_invoice(seed=None):
                           (random.choice([f"GST {rate_t}%", f"Tax ({rate_t}%)", f"VAT {rate_t}%", f"SST {rate_t}%"]), tax, L["TAX"]),
                           (random.choice(["Total", "Grand Total", "TOTAL DUE", "Amount Payable"]), tot, L["TOTAL"])):
         bold = lab == L["TOTAL"]
-        cv.text(key, cx_amt - (fb.getlength("0" * 12)) - 60, y, fb if bold else f)
-        cv.text(_money(val, cur, dec), cx_amt, y, fb if bold else f, lab, right=True)
+        font, amt = (fb if bold else f), _money(val, cur, dec)
+        cv.text(key, min(cx_amt - fb.getlength("0" * 12) - 60, cx_amt - font.getlength(amt) - font.getlength(key) - 24), y, font)
+        cv.text(amt, cx_amt, y, font, lab, right=True)
         y += fs + 9
     y += 18
     for line in random.sample(["Thank you for your business", "Payment due in 30 days", "Goods once sold cannot be returned",
