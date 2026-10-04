@@ -6,17 +6,30 @@ venv/
 # Environment variables & secrets
 .env
 
-# Model weights & Checkpoints (large files)
+# Model weights & checkpoints (large files) - download from Kaggle into models/checkpoints/
 models/checkpoints/*.pth
 models/checkpoints/*.pt
+models/checkpoints/*.json
 
-# Uploads directory
+# Data built on Kaggle / generated bundles
+data/processed/
+kaggle_bundle/
+
+# Uploads and local database
 uploads/
+*.db
 
 # Python cache files
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
 
 # Docker/OS files
 .DS_Store
+
+results/

@@ -1,14 +1,20 @@
+# --- API ---
 fastapi==0.111.0
-uvicorn==0.30.1
+uvicorn[standard]==0.30.1
 python-multipart==0.0.9
-celery==5.4.0
-redis==5.0.7
-torch==2.3.1
-torchvision==0.18.1
-psycopg2-binary==2.9.9
-sqlalchemy==2.0.30
 pydantic==2.7.1
 pydantic-settings==2.3.1
-python-jose==3.3.0
-passlib==1.7.4
-python-dotenv==1.0.1
+sqlalchemy==2.0.30
+openpyxl>=3.1
+
+# --- inference (models are trained on Kaggle; here we only RUN them on CPU) ---
+# CPU-only torch is enough:  pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cpu
+torch==2.3.1
+numpy<2                  # torch 2.3.1 is built against numpy 1.x
+Pillow>=10
+pdf2image>=1.17
+pytesseract>=0.3.10
+
+# --- tests ---
+pytest>=8
+httpx<0.28               # fastapi 0.111's TestClient breaks with httpx 0.28+
