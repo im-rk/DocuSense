@@ -1,0 +1,190 @@
+{
+ "n_documents": 5,
+ "field_accuracy": {
+  "vendor": 1.0,
+  "date": 1.0,
+  "invoice_number": 0.4,
+  "subtotal": 1.0,
+  "tax": 1.0,
+  "total": 1.0
+ },
+ "overall": 0.9,
+ "avg_seconds_per_document": 1.77,
+ "rows": [
+  {
+   "file": "samples/sample_1.png",
+   "type": "INVOICE",
+   "status": "OK",
+   "vendor": {
+    "gt": "Zenith Services Corp",
+    "pred": "Zenith Services Corp",
+    "ok": true
+   },
+   "date": {
+    "gt": "2022-10-10",
+    "pred": "2022-10-10",
+    "ok": true
+   },
+   "subtotal": {
+    "gt": 14103.83,
+    "pred": 14103.83,
+    "ok": true
+   },
+   "tax": {
+    "gt": 1692.46,
+    "pred": 1692.46,
+    "ok": true
+   },
+   "total": {
+    "gt": 15796.29,
+    "pred": 15796.29,
+    "ok": true
+   },
+   "invoice_number": {
+    "gt": "IN/2018-4082",
+    "pred": "!N/2018-4082",
+    "ok": false
+   }
+  },
+  {
+   "file": "samples/sample_2.png",
+   "type": "RECEIPT",
+   "status": "OK",
+   "vendor": {
+    "gt": "Maple Bakery Corp",
+    "pred": "Maple Bakery Corp",
+    "ok": true
+   },
+   "date": {
+    "gt": "2023-02-26",
+    "pred": "2023-02-26",
+    "ok": true
+   },
+   "subtotal": {
+    "gt": 6801.31,
+    "pred": 6801.31,
+    "ok": true
+   },
+   "tax": {
+    "gt": 544.1,
+    "pred": 544.1,
+    "ok": true
+   },
+   "total": {
+    "gt": 7345.41,
+    "pred": 7345.41,
+    "ok": true
+   },
+   "invoice_number": {
+    "gt": "2018-2642",
+    "pred": "2018-2642",
+    "ok": true
+   }
+  },
+  {
+   "file": "samples/sample_3.png",
+   "type": "OTHER",
+   "status": "OK",
+   "vendor": {
+    "gt": "Urban Hardware Co.",
+    "pred": "Urban Hardware Co.",
+    "ok": true
+   },
+   "date": {
+    "gt": "2025-05-23",
+    "pred": "2025-05-23",
+    "ok": true
+   },
+   "subtotal": {
+    "gt": 25208.84,
+    "pred": 25208.84,
+    "ok": true
+   },
+   "tax": {
+    "gt": 2016.71,
+    "pred": 2016.71,
+    "ok": true
+   },
+   "total": {
+    "gt": 27225.55,
+    "pred": 27225.55,
+    "ok": true
+   },
+   "invoice_number": {
+    "gt": "INV-2018-0009",
+    "pred": "INV-2018-0009",
+    "ok": true
+   }
+  },
+  {
+   "file": "samples/sample_4.png",
+   "type": "INVOICE",
+   "status": "OK",
+   "vendor": {
+    "gt": "Zenith Services LLP",
+    "pred": "Zenith Services LLP",
+    "ok": true
+   },
+   "date": {
+    "gt": "2021-08-25",
+    "pred": "2021-08-25",
+    "ok": true
+   },
+   "subtotal": {
+    "gt": 16023.99,
+    "pred": 16023.99,
+    "ok": true
+   },
+   "tax": {
+    "gt": 2884.32,
+    "pred": 2884.32,
+    "ok": true
+   },
+   "total": {
+    "gt": 18908.31,
+    "pred": 18908.31,
+    "ok": true
+   },
+   "invoice_number": {
+    "gt": "IN/2024-2661",
+    "pred": null,
+    "ok": false
+   }
+  },
+  {
+   "file": "samples/sample_5.png",
+   "type": "INVOICE",
+   "status": "OK",
+   "vendor": {
+    "gt": "Star Supplies Inc",
+    "pred": "Star Supplies Inc",
+    "ok": true
+   },
+   "date": {
+    "gt": "2019-07-23",
+    "pred": "2019-07-23",
+    "ok": true
+   },
+   "subtotal": {
+    "gt": 10803.37,
+    "pred": 10803.37,
+    "ok": true
+   },
+   "tax": {
+    "gt": 1944.61,
+    "pred": 1944.61,
+    "ok": true
+   },
+   "total": {
+    "gt": 12747.98,
+    "pred": 12747.98,
+    "ok": true
+   },
+   "invoice_number": {
+    "gt": "INV-2023-6856",
+    "pred": "|NV-2023-6856",
+    "ok": false
+   }
+  }
+ ]
+}

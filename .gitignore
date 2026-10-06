@@ -32,6 +32,3 @@ frontend/dist/
 # Docker/OS files
 .DS_Store
 
-results/
-
-evaluation/results.json
