@@ -33,3 +33,5 @@ frontend/dist/
 .DS_Store
 
 results/
+
+evaluation/results.json

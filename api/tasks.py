@@ -2,6 +2,8 @@
 import logging
 from datetime import datetime, timezone
 
+from PIL import UnidentifiedImageError
+
 from db.models import Document, Extraction
 from db.session import SessionLocal
 from pipeline.loader import ModelsNotFound
@@ -35,6 +37,8 @@ def process_document(doc_id: str):
             doc.error = None
         except ModelsNotFound as e:
             doc.status, doc.error = "FAILED", str(e)
+        except UnidentifiedImageError:
+            doc.status, doc.error = "FAILED", "The file is not a readable image or PDF (corrupt or wrong format)."
         except Exception as e:                                       # never leave a document stuck in PROCESSING
             log.exception("processing failed for %s", doc_id)
             doc.status, doc.error = "FAILED", f"{type(e).__name__}: {e}"[:1000]
