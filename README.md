@@ -33,6 +33,8 @@ cd frontend ; npm install ; npm run dev             # UI at http://localhost:517
 ```
 Without the checkpoints the API still starts; uploads are marked FAILED with a message that says what to do.
 
+> **Testing the whole project end to end?** Follow [TESTING.md](TESTING.md) (setup, sample files, manual checklist).
+
 ## Tests
 ```powershell
 pytest -q            # parsing, validation, dataset builders, model shapes/padding/parity, tiny CPU training, API, pipeline

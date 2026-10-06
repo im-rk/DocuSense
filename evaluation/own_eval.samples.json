@@ -1,0 +1,57 @@
+[
+ {
+  "file": "samples/sample_1.png",
+  "ground_truth": {
+   "vendor": "Zenith Services Corp",
+   "date": "2022-10-10",
+   "subtotal": 14103.83,
+   "tax": 1692.46,
+   "total": 15796.29,
+   "invoice_number": "IN/2018-4082"
+  }
+ },
+ {
+  "file": "samples/sample_2.png",
+  "ground_truth": {
+   "vendor": "Maple Bakery Corp",
+   "date": "2023-02-26",
+   "subtotal": 6801.31,
+   "tax": 544.1,
+   "total": 7345.41,
+   "invoice_number": "2018-2642"
+  }
+ },
+ {
+  "file": "samples/sample_3.png",
+  "ground_truth": {
+   "vendor": "Urban Hardware Co.",
+   "date": "2025-05-23",
+   "subtotal": 25208.84,
+   "tax": 2016.71,
+   "total": 27225.55,
+   "invoice_number": "INV-2018-0009"
+  }
+ },
+ {
+  "file": "samples/sample_4.png",
+  "ground_truth": {
+   "vendor": "Zenith Services LLP",
+   "date": "2021-08-25",
+   "subtotal": 16023.99,
+   "tax": 2884.32,
+   "total": 18908.31,
+   "invoice_number": "IN/2024-2661"
+  }
+ },
+ {
+  "file": "samples/sample_5.png",
+  "ground_truth": {
+   "vendor": "Star Supplies Inc",
+   "date": "2019-07-23",
+   "subtotal": 10803.37,
+   "tax": 1944.61,
+   "total": 12747.98,
+   "invoice_number": "INV-2023-6856"
+  }
+ }
+]
