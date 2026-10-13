@@ -53,3 +53,13 @@ def test_missing_checkpoints_message(monkeypatch, tmp_path):
     monkeypatch.setattr(loader, "_models", None)
     with pytest.raises(loader.ModelsNotFound, match="KAGGLE_TRAINING"):
         loader.get_models()
+
+
+def test_settings_ignore_unprefixed_keys_in_env_file(tmp_path, monkeypatch):
+    """A stale v1 .env (DATABASE_URL=postgres...) must not override our settings; DOCUSENSE_* keys still work."""
+    from config.settings import Settings
+    (tmp_path / ".env").write_text("DATABASE_URL=postgresql://x@localhost/db\nDOCUSENSE_TESSERACT_CMD=/opt/tess\n")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("DOCUSENSE_DATABASE_URL", raising=False)
+    s = Settings()
+    assert s.database_url == "sqlite:///docusense.db" and s.tesseract_cmd == "/opt/tess"
