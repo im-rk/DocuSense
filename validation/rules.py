@@ -1,9 +1,11 @@
 """Arithmetic + completeness checks on extracted fields."""
 
 REQUIRED = ("vendor", "date", "total")
+NOT_FINANCIAL = ("FORM", "LETTER", "OTHER")      # Model 1 classes that are not a receipt or invoice
 
 
-def validate(fields: dict, line_items: list, confidences: dict, low_conf: float = 0.70) -> dict:
+def validate(fields: dict, line_items: list, confidences: dict, low_conf: float = 0.70,
+             doc_type: str = None, type_conf: float = None, type_warn_conf: float = 0.50) -> dict:
     errors, warnings, checks = [], [], {}
     sub, tax, tot = fields.get("subtotal"), fields.get("tax"), fields.get("total")
 
@@ -33,6 +35,13 @@ def validate(fields: dict, line_items: list, confidences: dict, low_conf: float 
     if low:
         warnings.append("low confidence: " + ", ".join(low))
 
-    return {"passed": not errors, "needs_review": bool(errors or low or missing),
+    # Model 2 only knows receipts and invoices, so on a letter or form it still returns plausible-looking fields.
+    # Model 1 is the only part that can notice; it warns (never blocks) because it is only ~90 % accurate.
+    wrong_type = doc_type in NOT_FINANCIAL and (type_conf or 0) >= type_warn_conf
+    if wrong_type:
+        warnings.insert(0, f"this page was classified as '{doc_type.lower()}' ({type_conf:.0%} sure), not a receipt or invoice - "
+                           "the extracted fields may be meaningless")
+
+    return {"passed": not errors, "needs_review": bool(errors or low or missing or wrong_type),
             "errors": errors, "warnings": warnings, "checks": checks,
             "missing_fields": missing, "low_confidence_fields": low}

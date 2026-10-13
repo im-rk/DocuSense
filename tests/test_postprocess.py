@@ -73,3 +73,14 @@ def test_total_prefers_confident_then_lowest():
     words = [W("Total", 0, 0), W("10.00", L["TOTAL"], 0, y=0, prob=0.9),
              W("Total", 0, 1), W("12.00", L["TOTAL"], 1, y=50, prob=0.9)]
     assert extract(words)["fields"]["total"] == 12.0
+
+
+def test_validate_warns_when_page_is_not_a_receipt():
+    f = {"vendor": "Acme", "date": "2024-01-01", "total": 10.0}
+    # confident non-receipt -> warning + review, but never an error (extraction is not blocked)
+    v = validate(f, [], {}, doc_type="LETTER", type_conf=0.91)
+    assert v["needs_review"] and not v["errors"] and "'letter'" in v["warnings"][0] and "91%" in v["warnings"][0]
+    # unsure non-receipt, and receipt/invoice pages: no warning
+    assert not validate(f, [], {}, doc_type="LETTER", type_conf=0.30)["needs_review"]
+    assert not validate(f, [], {}, doc_type="INVOICE", type_conf=0.99)["needs_review"]
+    assert not validate(f, [], {})["needs_review"]                     # old call style still works

@@ -24,7 +24,8 @@ def process(path: str, models=None) -> dict:
     ocr_words = get_words(img, settings.ocr_min_conf, settings.ocr_psm, settings.tesseract_cmd)
     tagged = tag_words(m.tagger, m.vocab, gray, ocr_words, settings.device) if ocr_words else []   # Model 2
     ex = extract(tagged)
-    val = validate(ex["fields"], ex["line_items"], ex["field_confidences"], settings.review_conf_threshold)
+    val = validate(ex["fields"], ex["line_items"], ex["field_confidences"], settings.review_conf_threshold,
+                   doc_type, type_conf, settings.type_warn_conf)
     if not ocr_words:
         val["errors"].append("no text found on the page (blank or unreadable image)")
         val["passed"], val["needs_review"] = False, True

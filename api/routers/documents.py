@@ -139,7 +139,8 @@ def save_corrections(doc_id: str, body: FieldsUpdate, db: Session = Depends(get_
                               corrected=json.dumps(items)))
             e.line_items = items
     e.fields, e.confidences = fields, conf                              # re-assign so SQLAlchemy sees the change
-    e.validation = validate(fields, e.line_items, conf, settings.review_conf_threshold)
+    e.validation = validate(fields, e.line_items, conf, settings.review_conf_threshold,
+                            e.document_type, e.type_confidence, settings.type_warn_conf)
     d.status = "NEEDS_REVIEW" if e.validation["needs_review"] else "COMPLETE"
     db.commit()
     return {"document": _summary(d), "result": _result(d)}
