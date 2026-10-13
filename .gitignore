@@ -32,3 +32,8 @@ frontend/dist/
 # Docker/OS files
 .DS_Store
 
+
+# Local-only documents (not pushed)
+PPT.md
+PROJECT_REPORT.md
+TESTING.md
